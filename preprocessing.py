@@ -8,6 +8,7 @@ from python_speech_features import mfcc, logfbank
 from pydub import AudioSegment
 from pydub.utils import make_chunks
 from joblib import dump, load
+from sklearn.preprocessing import scale
 
 def split_audio(audio_file, chunk_length_ms):
     myaudio = AudioSegment.from_file(audio_file , "wav")
@@ -26,9 +27,22 @@ def split_audio(audio_file, chunk_length_ms):
 
 def split_subtitles(subtitles):
     chunks = os.listdir('chunks')
+
+    chunk_size = len(get_speech_features('chunks/' + sorted(chunks)[0]))
+    last_chunk_size = len(get_speech_features('chunks/' + sorted(chunks)[-1]))
+    splitted_subtitles = {}
+    first = 0
+    last = chunk_size
     for chunk in sorted(chunks):
-        print(chunk)
-    return 0
+        splitted_subtitles[chunk] = subtitles[first:last]
+        first = last + 1
+        last += chunk_size + 1
+
+    splitted_subtitles[sorted(chunks)[-1]] = splitted_subtitles[sorted(chunks)[-1]][0:last_chunk_size]
+
+    return splitted_subtitles
+
+
 
 def get_speech_features(audio_file):
     frequency_sampling, audio_signal = wavfile.read(audio_file)
