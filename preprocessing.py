@@ -10,7 +10,7 @@ from pydub.utils import make_chunks
 from joblib import dump, load
 from sklearn.preprocessing import scale
 
-def split_audio(audio_file, chunk_length_ms):
+def create_audio_chunks(audio_file, chunk_length_ms):
     myaudio = AudioSegment.from_file(audio_file , "wav")
     chunks = make_chunks(myaudio, chunk_length_ms) # Make chunks of one sec
 
