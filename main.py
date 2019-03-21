@@ -6,7 +6,7 @@ import wave
 import contextlib
 
 def main():
-    print( 10.0 ** -np.arange(1, 10))
+    predict()
 
 def predict():
     subtitles = generate_subtitles("datasets/SF_ANYTIME_9259_no.srt")
@@ -64,6 +64,6 @@ def train():
     X = np.vstack((X, get_speech_features("chunks/chunk0.wav")))
     y = np.hstack((y, splitted_subtitles["chunk0.wav"]))
 
-    clf = train_svm(X, y)
+    clf = train_mlp(X, y)
 
 main()
