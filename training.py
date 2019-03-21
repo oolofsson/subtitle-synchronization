@@ -44,16 +44,11 @@ def train_random_forest(X, y):
     return clf
 
 def train_mlp(X, y):
-
-<<<<<<< Updated upstream
     param_grid = {'solver': ['lbfgs', 'adam'],
                   'max_iter': [2000],
                   'alpha': 10.0 ** -np.arange(1, 4),
                   'hidden_layer_sizes': [10,15],
                   'random_state':[0,5,9]}
-=======
-    param_grid = {'solver': ['lbfgs', 'adam'], 'max_iter': [2000], 'alpha': 10.0 ** -np.arange(1, 4), 'hidden_layer_sizes': [10,15], 'random_state':[0,5,9]}
->>>>>>> Stashed changes
     clf = GridSearchCV(MLPClassifier(), param_grid, n_jobs=-1, verbose=2)
 
     print("training started.")

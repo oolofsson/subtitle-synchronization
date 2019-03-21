@@ -13,7 +13,7 @@ def predict():
     create_audio_chunks("datasets/SF_ANYTIME_9259.wav", chunk_length_ms=50000) # stored in chunks folder
     splitted_subtitles = split_subtitles(subtitles) # based on chunks
 
-    clf = load('models/svm.joblib')
+    clf = load('models/mlp.joblib')
     predicted = clf.predict(get_speech_features("chunks/chunk1.wav"))
 
     labels = splitted_subtitles["chunk1.wav"]
