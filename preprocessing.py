@@ -42,13 +42,11 @@ def split_subtitles(subtitles):
 
     return splitted_subtitles
 
-
-
 def get_speech_features(audio_file):
     frequency_sampling, audio_signal = wavfile.read(audio_file)
     # audio_signal = audio_signal[:1500000]
 
-    features_mfcc = mfcc(signal=audio_signal, samplerate=frequency_sampling, nfft=1200)
+    features_mfcc = mfcc(signal=audio_signal, samplerate=frequency_sampling, winlen=0.025, nfft=512)
 
     print('\nMFCC:\nNumber of windows =', features_mfcc.shape[0])
     print('Length of each feature =', features_mfcc.shape[1])
@@ -56,8 +54,8 @@ def get_speech_features(audio_file):
     features_mfcc = features_mfcc.T
     #plt.matshow(features_mfcc)
     #plt.title('MFCC')
-
-    filterbank_features = logfbank(signal=audio_signal, samplerate=frequency_sampling, nfft=1200)
+    print("frequency is: ", frequency_sampling)
+    filterbank_features = logfbank(signal=audio_signal, samplerate=frequency_sampling, winlen=0.025, nfft=512)
 
     print('\nFilter bank:\nNumber of windows =', filterbank_features.shape[0])
     print('Length of each feature =', filterbank_features.shape[1])
@@ -93,3 +91,36 @@ def generate_subtitles(srt_file):
             for i in range(start*200, end*200):
                 subtitles[i] = 1
         return subtitles
+
+
+def generate_dist(predicted, labels):
+    n1s = 0
+    predictedDist = []
+    i = 0
+    for prediction in predicted:
+        if prediction == 1:
+            n1s += 1
+        if i == 200:
+            if n1s >= 100:
+                predictedDist.append(1)
+            else:
+                predictedDist.append(0)
+            n1s = 0
+            i = 0
+        i += 1
+
+    n1s = 0
+    labelDist = []
+    i = 0
+    for label in labels:
+        if label == 1:
+            n1s += 1
+        if i == 200:
+            if n1s >= 200:
+                labelDist.append(1)
+            else:
+                labelDist.append(0)
+            n1s = 0
+            i = 0
+        i += 1
+    return predictedDist, labelDist

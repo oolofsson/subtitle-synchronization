@@ -6,22 +6,27 @@ import wave
 import contextlib
 
 def main():
-    train()
+    print( 10.0 ** -np.arange(1, 10))
 
 def predict():
-    subtitles = generate_subtitles("datasets/ABMQU_no.srt")
-    create_audio_chunks("datasets/ABMQU.wav", chunk_length_ms=500000) # stored in chunks folder
+    subtitles = generate_subtitles("datasets/SF_ANYTIME_9259_no.srt")
+    create_audio_chunks("datasets/SF_ANYTIME_9259.wav", chunk_length_ms=50000) # stored in chunks folder
     splitted_subtitles = split_subtitles(subtitles) # based on chunks
 
-    clf = load('models/mlp.joblib')
-    predicted = clf.predict(get_speech_features("chunks/chunk3.wav"))
+    clf = load('models/svm.joblib')
+    predicted = clf.predict(get_speech_features("chunks/chunk1.wav"))
 
-    labels = splitted_subtitles["chunk3.wav"]
-    visualize_prediction_strict(predicted, labels)
+    labels = splitted_subtitles["chunk1.wav"]
+
+    predictedDist, labelDist = generate_dist(predicted, labels)
+    visualize_prediction(predictedDist, labelDist)
+
+    print(predictedDist)
+    print(labelDist)
     print("similarity:")
-    print(similarity(predicted, labels))
+    print(similarity(predictedDist, labelDist))
     print("accuracy:")
-    print(accuracy(predicted, labels))
+    print(accuracy(predictedDist, labelDist))
 
 def train():
     subtitles = generate_subtitles("datasets/SF_ANYTIME_9259_no.srt")
