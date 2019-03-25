@@ -46,7 +46,6 @@ def train_random_forest(X, y):
     return clf
 
 def train_mlp(X, y):
-
     param_grid = {'solver': ['lbfgs', 'adam'],
                   'max_iter': [2000],
                   'alpha': 10.0 ** -np.arange(1, 4),
