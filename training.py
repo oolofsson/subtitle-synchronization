@@ -6,11 +6,13 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import GridSearchCV
 
-from keras.layers import Dense, Input, LSTM, Conv1D, Conv2D, Dropout, Flatten, Activation, MaxPooling2D
-from keras.models import Model
+import tensorflow as tf
+import keras
+
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, LSTM, Flatten, TimeDistributed, AveragePooling1D, Conv1D
 from keras.layers.normalization import BatchNormalization
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.optimizers import Adam, RMSprop
+from keras.optimizers import Adam
 
 def train_svm(X, y):
 
@@ -59,22 +61,51 @@ def train_mlp(X, y):
     dump(clf, 'models/mlp.joblib')
     return clf
 
-def model_lstm(input_shape):
-    inp = Input(shape=input_shape)
-    model = inp
+def train_rnn(X, y):
+    print(X.shape)
+    #X = X.reshape(X.shape[1], X.shape[0], X.shape[1])
+    X = np.reshape(X, (X.shape[0], 1, X.shape[1]))
+    #print(X.shape)
+    model = Sequential()
+    model.add(LSTM(128, input_shape=X.shape[1:], activation='relu', return_sequences=True))
+    model.add(Dropout(0.2))
 
-    if input_shape[0] > 2: model = Conv1D(filters=24, kernel_size=(3), activation='relu')(model)
-#    if input_shape[0] > 0: model = TimeDistributed(Conv1D(filters=24, kernel_size=3, activation='relu'))(model)
-    model = LSTM(16)(model)
-    model = Activation('relu')(model)
-    model = Dropout(0.2)(model)
-    model = Dense(16)(model)
-    model = Activation('relu')(model)
-    model = BatchNormalization()(model)
-    model = Dense(1)(model)
-    model = Activation('sigmoid')(model)
+    model.add(LSTM(128, activation='relu'))
+    model.add(Dropout(0.2))
 
-    model = Model(inp, model)
+
+    model.add(Dense(32, activation='relu'))
+    model.add(Dropout(0.2))
+
+    model.add(Dense(1, activation='softmax'))
+    model.add(Dropout(0.2))
+
+    model.compile(loss='binary_crossentropy',
+        optimizer=Adam(lr=1e-3, decay=1e-5),
+        metrics=['accuracy'])
+
+    model.fit(X, y, epochs=3)
+    dump(model, 'models/rnn.joblib')
+
     return model
 
-#reccurentnet
+
+def train_cnn_lstm(X, y):
+
+    X = np.reshape(X, (X.shape[0], 1, X.shape[1]))
+
+    model = Sequential()
+    model.add(Conv1D(filters=26, kernel_size=(1), activation='relu'))
+    model.add(LSTM(16, activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(16, activation='relu'))
+    model.add(BatchNormalization())
+
+    model.add(Dense(1, activation='softmax'))
+    model.compile(loss='binary_crossentropy',
+        optimizer=Adam(lr=0.001),
+        metrics=['accuracy'])
+
+    model.fit(X, y, epochs=3)
+    dump(model, 'models/cnnlstm.joblib')
+    return model
