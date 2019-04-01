@@ -4,7 +4,7 @@ from sklearn.preprocessing import scale
 from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
 import tensorflow as tf
 import keras
@@ -16,12 +16,12 @@ from keras.optimizers import Adam
 
 def train_svm(X, y):
 
-    param_grid = {'C': [1,10,100,1000],
-                  'gamma': [1,0.1,0.001,0.0001],
-                  'kernel': ['linear','rbf']}
+    param_grid = {'C': [0.1, 1, 10, 100, 1000],
+                  'gamma': [0.001, 0.01, 0.1, 1],
+                  'kernel': ['rbf']}
 
-    #clf = GridSearchCV(svm.SVC(),param_grid, refit = True, verbose=2)
-    clf = svm.SVC(kernel='rbf', gamma='scale', C=100, verbose=True)
+    clf = RandomizedSearchCV(svm.SVC(), param_grid, refit = True, n_jobs=-1, verbose=2)
+    #clf = svm.SVC(kernel='rbf', gamma='scale', C=100, verbose=True)
 
     print("training started.")
     clf.fit(X, y)
@@ -36,7 +36,7 @@ def train_random_forest(X, y):
                   'bootstrap': [True, False],
                   'criterion': ['gini', 'entropy']}
 
-    clf = GridSearchCV(RandomForestClassifier(n_estimators=20), param_grid, refit = True, verbose=2)
+    clf = RandomizedSearchCV(RandomForestClassifier(n_estimators=20), param_grid, refit = True, verbose=2)
 
     print("training started.")
     clf.fit(X, y)
@@ -51,7 +51,7 @@ def train_mlp(X, y):
                   'alpha': 10.0 ** -np.arange(1, 4),
                   'hidden_layer_sizes': [10,15],
                   'random_state':[0,5,9]}
-    clf = GridSearchCV(MLPClassifier(), param_grid, n_jobs=-1, verbose=2)
+    clf = RandomizedSearchCV(MLPClassifier(), param_grid, n_jobs=-1, verbose=2)
 
     print("training started.")
     clf.fit(X, y)
@@ -71,7 +71,6 @@ def train_rnn(X, y):
 
     model.add(LSTM(128, activation='relu'))
     model.add(Dropout(0.2))
-
 
     model.add(Dense(32, activation='relu'))
     model.add(Dropout(0.2))

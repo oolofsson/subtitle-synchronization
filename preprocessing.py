@@ -1,4 +1,5 @@
 import srt
+import pysrt
 import shutil
 import numpy as np
 import datetime
@@ -79,48 +80,33 @@ def get_speech_features(audio_file):
     #matplotlib inline
     return scale(np.array(filterbank_features), axis=0, with_mean=True, with_std=True, copy=True)
 
-def generate_subtitles(srt_file):
+def generate_subtitle_array(srt_file):
     with open(srt_file) as file:
         srt_string = file.read()
         subtitle_generator = srt.parse(srt_string)
         # generate subtitles array telling whether we have subtitle this second
         subtitles = np.zeros(100000000)
         for subtitle in list(subtitle_generator):
-            start = int(subtitle.start.total_seconds())
-            end = int(subtitle.end.total_seconds())
+            start = int(subtitle.start.total_seconds() + 4)
+            end = int(subtitle.end.total_seconds() + 4)
             for i in range(start*200, end*200):
                 subtitles[i] = 1
         return subtitles
 
-
-def generate_dist(predicted, labels):
+def generate_dist(array):
     n1s = 0
-    predictedDist = []
+    dist = []
     i = 0
-    for prediction in predicted:
-        if prediction == 1:
+    for element in array:
+        if element == 1:
             n1s += 1
         if i == 200:
             if n1s >= 100:
-                predictedDist.append(1)
+                dist.append(1)
             else:
-                predictedDist.append(0)
+                dist.append(0)
             n1s = 0
             i = 0
         i += 1
 
-    n1s = 0
-    labelDist = []
-    i = 0
-    for label in labels:
-        if label == 1:
-            n1s += 1
-        if i == 200:
-            if n1s >= 200:
-                labelDist.append(1)
-            else:
-                labelDist.append(0)
-            n1s = 0
-            i = 0
-        i += 1
-    return predictedDist, labelDist
+    return dist

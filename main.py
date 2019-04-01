@@ -4,78 +4,76 @@ from visualization import *
 from evaluation import *
 import wave
 import contextlib
+import time
 
 def main():
     predict()
 
 def predict():
-    subtitles = generate_subtitles("datasets/AAFPU_no.srt")
-    create_audio_chunks("datasets/AAFPU.wav", chunk_length_ms=500000) # stored in chunks folder
-    splitted_subtitles = split_subtitles(subtitles) # based on chunks
+    which_chunk = 1
+    X, y = get_features("NGPlus_170158_268038", 800000, "chunk" + str(which_chunk))
+    subtitles = generate_subtitle_array("datasets/NGPlus_170158_268038_no.srt")
 
-    clf = load('models/mlp.joblib')
-    X = get_speech_features("chunks/chunk2.wav")
+    clf = load('models/rf.joblib')
 
-    #X = np.reshape(X, (X.shape[0], 1, X.shape[1]))
-    #predicted = clf.predict(X).ravel()
-
+    start = time.time()
     predicted = clf.predict(X)
+    end = time.time()
+    print("time taken to predict: ", end - start, "s")
 
-    labels = splitted_subtitles["chunk2.wav"]
+    predictedDist = generate_dist(predicted)
+    labelDist = generate_dist(y)
+    subtitleDist = generate_dist(subtitles)
 
-    predictedDist, labelDist = generate_dist(predicted, labels)
-    visualize_prediction(predictedDist, labelDist)
+    #visualize_prediction(predictedDist, labelDist)
 
-    print(predictedDist)
-    print(labelDist)
-    print("similarity:")
-    print(similarity(predictedDist, labelDist))
     print("accuracy:")
     print(accuracy(predictedDist, labelDist))
-    print("start shifting:")
-    shift(predictedDist, labelDist)
+    #print("start shifting:")
+    chunk_start = which_chunk * len(predictedDist)
+    chunk_end = chunk_start + len(predictedDist)
+    search_sync(predictedDist, subtitleDist, chunk_start, chunk_end)
 
-def shift(predictedDist, labelDist):
-    for i in range(0, len(labelDist), 5):
-        print(similarity(predictedDist, np.roll(labelDist, i)))
+def search_sync(predictedDist, subtitleDist, chunk_start, chunk_end):
+    # search forwards
+    i = 0
+    print("start searching forwards")
+    print("predictedDist Length: ")
+    print(len(predictedDist))
+    print("subtitleDist Length: ")
+    print(len(subtitleDist[chunk_start + i:chunk_end + i]))
+    while i < 20:
+        print(similarity(predictedDist, subtitleDist[chunk_start + i:chunk_end + i]))
+        i += 2
+
+    print("start searching backwards")
+    # search backwards
+    i = 0
+    while i < 20:
+        print(similarity(predictedDist, subtitleDist[chunk_start - i:chunk_end - i]))
+        i += 2
+
+def get_features(id, chunk_length_ms, chunk):
+    subtitle_array = generate_subtitle_array("datasets/" + id + "_no.srt")
+    create_audio_chunks("datasets/" + id + ".wav", chunk_length_ms) # stored in chunks folder
+    splitted_subtitles = split_subtitles(subtitle_array) # based on chunks
+
+    return get_speech_features("chunks/" + chunk + ".wav"), splitted_subtitles[chunk + ".wav"]
+
 def train():
-    subtitles = generate_subtitles("datasets/SF_ANYTIME_9259_no.srt")
-    create_audio_chunks("datasets/SF_ANYTIME_9259.wav", chunk_length_ms=100000) # stored in chunks folder
-    splitted_subtitles = split_subtitles(subtitles) # based on chunks
 
-    X = get_speech_features("chunks/chunk2.wav")
-    y = splitted_subtitles["chunk2.wav"]
+    #X, y = get_features("SF_ANYTIME_9259", 100000, "chunk2")
+    X = []
+    y = []
+    for id in ["SF_ANYTIME_9259", "AAFPU", "ABMQU", "SF_ANYTIME_9547", "CMRE0000000001000202", "ABMUI", "ABMRG"]:
+        Xadd, yadd = get_features(id, 100000, "chunk1")
+        if len(X):
+            X = np.vstack((X, Xadd))
+            y = np.hstack((y, yadd))
+        else:
+            X = Xadd
+            y = yadd
 
-    subtitles = generate_subtitles("datasets/AAFPU_no.srt")
-    create_audio_chunks("datasets/AAFPU.wav", chunk_length_ms=100000) # stored in chunks folder
-    splitted_subtitles = split_subtitles(subtitles)
-
-    X = np.vstack((X, get_speech_features("chunks/chunk1.wav")))
-    y = np.hstack((y, splitted_subtitles["chunk1.wav"]))
-
-    subtitles = generate_subtitles("datasets/ABMQU_no.srt")
-    create_audio_chunks("datasets/ABMQU.wav", chunk_length_ms=100000) # stored in chunks folder
-    splitted_subtitles = split_subtitles(subtitles)
-
-    X = np.vstack((X, get_speech_features("chunks/chunk2.wav")))
-    y = np.hstack((y, splitted_subtitles["chunk2.wav"]))
-
-
-    subtitles = generate_subtitles("datasets/SF_ANYTIME_9547_no.srt")
-    create_audio_chunks("datasets/SF_ANYTIME_9547.wav", chunk_length_ms=100000) # stored in chunks folder
-    splitted_subtitles = split_subtitles(subtitles) # based on chunks
-
-    X = np.vstack((X, get_speech_features("chunks/chunk1.wav")))
-    y = np.hstack((y, splitted_subtitles["chunk1.wav"]))
-
-    subtitles = generate_subtitles("datasets/CMRE0000000001000202_no.srt")
-    create_audio_chunks("datasets/CMRE0000000001000202.wav", chunk_length_ms=300000) # stored in chunks folder
-    splitted_subtitles = split_subtitles(subtitles) # based on chunks
-
-    X = np.vstack((X, get_speech_features("chunks/chunk1.wav")))
-    y = np.hstack((y, splitted_subtitles["chunk1.wav"]))
-
-    clf = train_cnn_lstm(X, y)
-
+    clf = train_random_forest(X, y)
 
 main()
