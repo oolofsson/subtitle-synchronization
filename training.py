@@ -36,13 +36,13 @@ def train_random_forest(X, y):
                   'bootstrap': [True, False],
                   'criterion': ['gini', 'entropy']}
 
-    clf = RandomizedSearchCV(RandomForestClassifier(n_estimators=20), param_grid, refit = True, verbose=2)
+    clf = RandomizedSearchCV(RandomForestClassifier(n_estimators=20), param_grid, n_jobs=-1, refit = True, verbose=2)
 
     print("training started.")
     clf.fit(X, y)
     print("training finished.")
 
-    dump(clf, 'models/rf.joblib')
+    dump(clf, 'models/rfsuper.joblib')
     return clf
 
 def train_mlp(X, y):
@@ -57,7 +57,7 @@ def train_mlp(X, y):
     clf.fit(X, y)
     print("training finished.")
 
-    dump(clf, 'models/mlp.joblib')
+    dump(clf, 'models/mlpnext.joblib')
     return clf
 
 def train_rnn(X, y):

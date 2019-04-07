@@ -6,84 +6,108 @@ import wave
 import contextlib
 import time
 
-
-
 def main():
     predict()
 
 def predict():
-    which_chunk = 2
-    filename = "FoxPlus_YSS104"
+    # used for training
+    # "SF_ANYTIME_9259", "AAFPU", "ABMQU", "SF_ANYTIME_9547", "CMRE0000000001000202", "ABMUI", "ABMRG"
+    id = "SF_ANYTIME_9564"
 
-    features, labels = get_features(filename, 500000, "chunk" + str(which_chunk))
-
-    clf = load('models/rf.joblib')
+    speech_features = get_speech_features("datasets/" + id + ".wav")
+    clf = load('models/rfnext.joblib')
 
     start = time.time()
-    predicted = clf.predict(features)
+    predicted = clf.predict(speech_features)
     end = time.time()
 
-    predicted = per_sec(predicted, windows_per_sec=200)
-    labels = per_sec(labels, windows_per_sec=200)
+    predicted_sec = per_sec(predicted, windows_per_sec=200)
+    subtitles_array = get_subtitles_array("datasets/" + id + "_no.srt", length=len(predicted_sec))
+    visualize_prediction_fraction(predicted, subtitles_array, 200)
 
+    print("accuracy rfnext: ", get_accuracy(predicted_sec, subtitles_array))
+
+    clf = load('models/rfsuper.joblib')
+
+    start = time.time()
+    predicted = clf.predict(speech_features)
+    end = time.time()
+    predicted_sec = per_sec(predicted, windows_per_sec=200)
+    print("accuracy rfsuper: ", get_accuracy(predicted_sec, subtitles_array))
     #plot_roc(predictedDist, labelDist)
+    '''
     print("time taken to predict: ", end - start, "s")
     for i in range(0, 4):
-        subtitles_array = get_subtitles_array("datasets/" + filename + "_no.srt", offset=i)
-        chunk_start = which_chunk * len(predicted)
-        chunk_end = chunk_start + len(predicted)
-        print("unsync at: " + str(i) + ", " + str(search_sync(predicted, subtitles_array, chunk_start, chunk_end)))
+        padding = 100
+        subtitles_array = get_subtitles_array("datasets/" + id + "_no.srt", length=len(predicted_sec), offset=i, padding=padding)
 
+        chunk_start = padding
+        chunk_end = chunk_start + len(predicted_sec)
+        #visualize_prediction(predicted, subtitles_array[chunk_start:chunk_end])
+        print("unsync at: " + str(i) + ", " + str(search_sync(predicted_sec, subtitles_array, chunk_start, chunk_end, padding)))
+    '''
 
-def search_sync(predicted, subtitles, chunk_start, chunk_end):
+def search_sync(predicted_sec, subtitles, chunk_start, chunk_end, steps):
     # search forwards
-    current_similarity = get_similarity(predicted, subtitles[chunk_start:chunk_end])
+    current_similarity = get_similarity(predicted_sec, subtitles[chunk_start:chunk_end])
     print("current_similarity ", current_similarity)
-    # subtitles = add_offset(subtitles), start and end...
-    # if chunk_start + predicted > len(subtitles), add more offset to end
-    # chunk_start = chunk_start + offset
-    # chunk_end = chunk_end + offset
-    i = 2
-    while i < 100:
-        sim = get_similarity(predicted, subtitles[chunk_start + i:chunk_end + i])
+
+    unsync = False
+    print("start searching forwards")
+    i = 1
+    while i < steps and chunk_end + i < len(subtitles):
+        sim = get_similarity(predicted_sec, subtitles[chunk_start + i:chunk_end + i])
         #print("i is: " + str(i) + " and sim is: " + str(sim))
         if current_similarity < sim:
-            return True
+            unsync = True
         i += 1
 
     print("start searching backwards")
     # search backwards
-    i = 2
-    while i < 100:
-        sim = get_similarity(predicted, subtitles[chunk_start - i:chunk_end - i])
+    i = 1
+    while i < steps:
+        sim = get_similarity(predicted_sec, subtitles[chunk_start - i:chunk_end - i])
         #print("i is: " + str(i) + " and sim is: " + str(sim))
         if current_similarity < sim:
-            return True
+            unsync = True
         i += 1
 
-    return False
+    return unsync
 
+def create_labels(subtitles_array, features_length):
+    labels = []
+    for presence in subtitles_array:
+        labels = np.concatenate((labels, np.full((200), presence)), axis=None)
 
-def get_features(id, chunk_length_ms, chunk):
-    subtitles_array = get_subtitles_array("datasets/" + id + "_no.srt")
-    create_audio_chunks("datasets/" + id + ".wav", chunk_length_ms) # stored in chunks folder
-    chunk_subtitles = get_chunk_subtitles(subtitles_array) # based on chunks
+    if len(labels) < features_length:
+        missing = features_length - len(labels)
+        labels = np.concatenate((labels, np.zeros(missing)), axis=None)
 
-    return get_speech_features("chunks/" + chunk + ".wav"), chunk_subtitles[chunk + ".wav"]
+    print("lengths...")
+    print(features_length)
+    print(len(labels))
+    return labels[0:features_length]
 
 def train():
 
     #X, y = get_features("SF_ANYTIME_9259", 100000, "chunk2")
     X = []
     y = []
-    for id in ["SF_ANYTIME_9259", "AAFPU", "ABMQU", "SF_ANYTIME_9547", "CMRE0000000001000202", "ABMUI", "ABMRG"]:
-        Xadd, yadd = get_features(id, 100000, "chunk1")
+    for id in ["ABMQU", "AAFPU", "ABMQU", "SF_ANYTIME_9547", "CMRE0000000001000202", "NGPlus_163151_183450", "FoxInSeasonStacked_YRG902"]:
+        # create chunks
+        features = get_speech_features("datasets/" + id + ".wav")
+        subtitles_array = get_subtitles_array("datasets/" + id + "_no.srt", int(len(features) / 200))
+        labels = create_labels(subtitles_array, len(features))
+        print("lengths...")
+        print(len(features))
+        print(len(labels))
+
         if len(X):
-            X = np.vstack((X, Xadd))
-            y = np.hstack((y, yadd))
+            X = np.vstack((X, features))
+            y = np.hstack((y, labels))
         else:
-            X = Xadd
-            y = yadd
+            X = features
+            y = labels
 
     clf = train_random_forest(X, y)
 

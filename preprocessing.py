@@ -25,22 +25,6 @@ def create_audio_chunks(audio_file, chunk_length_ms):
         print("exporting", chunk_name)
         chunk.export(chunk_name, format="wav")
 
-def get_chunk_subtitles(subtitles):
-    chunks = os.listdir('chunks')
-
-    chunk_size = len(get_speech_features('chunks/' + sorted(chunks)[0]))
-    last_chunk_size = len(get_speech_features('chunks/' + sorted(chunks)[-1]))
-    chunk_subtitles = {}
-    first = 0
-    last = int(chunk_size / 200)
-    for chunk in sorted(chunks):
-        chunk_subtitles[chunk] = subtitles[first:last]
-        first = last + 1
-        last += chunk_size + 1
-
-    chunk_subtitles[sorted(chunks)[-1]] = chunk_subtitles[sorted(chunks)[-1]][0:last_chunk_size]
-    return chunk_subtitles
-
 def get_speech_features(audio_file):
     frequency_sampling, audio_signal = wavfile.read(audio_file)
     # audio_signal = audio_signal[:1500000]
@@ -61,7 +45,7 @@ def get_speech_features(audio_file):
 
     return scale(np.array(filterbank_features), axis=0, with_mean=True, with_std=True, copy=True)
 
-def get_subtitles_array(srt_file, offset=0):
+def get_subtitles_array(srt_file, length, offset=0, padding=0):
     with open(srt_file) as file:
         srt_string = file.read()
         subtitles = list(srt.parse(srt_string))
@@ -73,6 +57,15 @@ def get_subtitles_array(srt_file, offset=0):
             end = int(subtitle.end.total_seconds()) + offset
             for i in range(start, end):
                 subtitles_array[i] = 1
+
+        diff = length - len(subtitles_array)
+        if diff > 0:
+            subtitles_array = np.concatenate((subtitles_array, np.zeros(diff)), axis=None)
+        elif diff < 0:
+            subtitles_array = subtitles_array[0:length]
+
+        subtitles_array = np.concatenate((subtitles_array, np.zeros(padding)), axis=None)
+        subtitles_array = np.concatenate((np.zeros(padding), subtitles_array), axis=None)
         return subtitles_array
 
 def per_sec(array, windows_per_sec):

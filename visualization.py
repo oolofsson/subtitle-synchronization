@@ -1,43 +1,26 @@
 import matplotlib.pyplot as plt
 
-def visualize_prediction(predictedDist, labelDist):
+def visualize_prediction(predicted, labels):
     # zeros threshold?
-    plt.plot(predictedDist)
-    plt.plot(labelDist)
-    plt.ylabel('predicted')
+    plt.plot(predicted)
+    plt.plot(labels)
+    plt.ylabel('predicted vs actual')
     plt.show()
 
-
-def visualize_prediction_strict(predicted, labels):
+def visualize_prediction_fraction(array, labels, windows_per_sec):
     n1s = 0
-    predictedDist = []
+    dist = []
     i = 0
-    for prediction in predicted:
-        if prediction == 1:
+    for element in array:
+        if element == 1:
             n1s += 1
-        if i == 200:
-            if n1s >= 100:
-                predictedDist.append(1)
-            else:
-                predictedDist.append(0)
+        if i == windows_per_sec:
+            dist.append(n1s / windows_per_sec)
             n1s = 0
             i = 0
         i += 1
-
-    n1s = 0
-    labelDist = []
-    i = 0
-    for label in labels:
-        if label == 1:
-            n1s += 1
-        if i == 200:
-            labelDist.append(n1s)
-            n1s = 0
-            i = 0
-        i += 1
-
-    # zeros threshold?
-    plt.plot(predictedDist)
-    plt.plot(labelDist)
-    plt.ylabel('predicted')
+        
+    plt.plot(dist)
+    plt.plot(labels)
+    plt.ylabel('percentage vs actual')
     plt.show()
