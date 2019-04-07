@@ -10,21 +10,6 @@ from pydub.utils import make_chunks
 from joblib import dump, load
 from sklearn.preprocessing import scale
 
-def create_audio_chunks(audio_file, chunk_length_ms):
-    myaudio = AudioSegment.from_file(audio_file , "wav")
-    chunks = make_chunks(myaudio, chunk_length_ms) # Make chunks of one sec
-
-    # remove earlier chunks
-
-    shutil.rmtree("chunks", ignore_errors=True)
-    os.makedirs("chunks")
-
-    # Export all of the individual chunks as wav files
-    for i, chunk in enumerate(chunks):
-        chunk_name = "chunks/chunk{0}.wav".format(i)
-        print("exporting", chunk_name)
-        chunk.export(chunk_name, format="wav")
-
 def get_speech_features(audio_file):
     frequency_sampling, audio_signal = wavfile.read(audio_file)
     # audio_signal = audio_signal[:1500000]
