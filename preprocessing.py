@@ -5,8 +5,6 @@ import datetime
 import os
 from scipy.io import wavfile
 from python_speech_features import mfcc, logfbank
-from pydub import AudioSegment
-from pydub.utils import make_chunks
 from joblib import dump, load
 from sklearn.preprocessing import scale
 
@@ -34,8 +32,8 @@ def get_subtitles_array(srt_file, length, offset=0, padding=0):
     with open(srt_file) as file:
         srt_string = file.read()
         subtitles = list(srt.parse(srt_string))
-        subtitles_end = subtitles[-1].end.total_seconds()
-        subtitles_array = np.zeros(int(subtitles_end) + offset)
+        subtitles_array = np.zeros(int(subtitles[-1].end.total_seconds()) + offset)
+        
         # generate subtitles array telling whether we have subtitle this second
         for subtitle in subtitles:
             start = int(subtitle.start.total_seconds()) + offset
@@ -55,21 +53,21 @@ def get_subtitles_array(srt_file, length, offset=0, padding=0):
 
 def per_sec(array, windows_per_sec):
     n1s = 0
-    dist = []
+    secs = []
     i = 0
     for element in array:
         if element == 1:
             n1s += 1
         if i == windows_per_sec:
             if n1s >= windows_per_sec / 2:
-                dist.append(1)
+                secs.append(1)
             else:
-                dist.append(0)
+                secs.append(0)
             n1s = 0
             i = 0
         i += 1
 
-    return dist
+    return secs
 
 
 # MFCC - plotting, to be used in get_speech_features
