@@ -6,6 +6,41 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
+def create_labels_from_subtitles(subtitles_presence_array, features_length):
+    labels = []
+    for presence in subtitles_presence_array:
+        labels = np.concatenate((labels, np.full((200), presence)), axis=None)
+
+    if len(labels) < features_length:
+        missing = features_length - len(labels)
+        labels = np.concatenate((labels, np.zeros(missing)), axis=None)
+
+    return labels[0:features_length]
+
+def train():
+
+    #X, y = get_features("SF_ANYTIME_9259", 100000, "chunk2")
+    X = []
+    y = []
+    for id in ["ABMQU", "AAFPU", "ABMQU", "SF_ANYTIME_9547", "CMRE0000000001000202"]:
+
+        # create chunks
+        features = get_speech_features("datasets/" + id + ".wav")
+        subtitles_presence_array = get_subtitles_presence_array("datasets/" + id + "_no.srt", int(len(features) / 200))
+        labels = create_labels_from_subtitles(subtitles_array_sec, len(features))
+        print("lengths...")
+        print(len(features))
+        print(len(labels))
+
+        if len(X):
+            X = np.vstack((X, features))
+            y = np.hstack((y, labels))
+        else:
+            X = features
+            y = labels
+
+    clf = train_random_forest(X, y)
+
 def train_svm(X, y):
 
     param_grid = {'C': [0.1, 1, 10, 100, 1000],
