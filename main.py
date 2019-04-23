@@ -20,8 +20,23 @@ s3_resource = boto3.resource('s3',
 )
 
 def main():
-    evaluate()
+    train()
 
+
+def test_sync():
+    id = "NGPlus_163151_183450"
+
+    speech_features = get_speech_features("datasets/" + id + ".wav")
+    clf = load('models/rfnext.joblib')
+
+    predicted = clf.predict(speech_features)
+    padding = 100
+    predicted_summarized = redistribute(predicted, 200)
+    start = padding
+    end = start + len(predicted_summarized)
+    subtitles_presence_array = get_subtitles_presence_array("datasets/" + id + "_no_shift2.srt", length=len(predicted_summarized), padding=padding)
+
+    synchronize(predicted_summarized, subtitles_presence_array, start, end, padding)
 # -------------------------------- Get Unsync Search --------------------------------
 
 def clean_detection_files():
@@ -48,7 +63,7 @@ def run_unsync_search():
     bucket = s3_resource.Bucket('get-internal-import')
     processed_ids = defaultdict(lambda:False)
 
-    clf = load('models/mlpnext.joblib')
+    clf = load('models/rfnext.joblib')
 
     for object in bucket.objects.all():
         keys = object.key.split('/')
@@ -104,7 +119,7 @@ def evaluate():
     # used for training default
     # "SF_ANYTIME_9259", "AAFPU", "ABMQU", "SF_ANYTIME_9547", "CMRE0000000001000202", "ABMUI", "ABMRG"
     # "ABMQU", "AAFPU", "ABMQU", "SF_ANYTIME_9547", "CMRE0000000001000202", "NGPlus_163151_183450", "FoxInSeasonStacked_YRG902"
-    id = "NGPlus_170158_268038"
+    id = "CMRE0000000001081770"
 
     speech_features = get_speech_features("datasets/" + id + ".wav")
 
@@ -115,10 +130,10 @@ def evaluate():
     end = time.time()
     print("time taken to predict: ", end - start, "s")
 
-    predicted_summarized = redistribute(predicted, size=200)
+    predicted_summarized = redistribute(predicted, 200)
     subtitles_presence_array = get_subtitles_presence_array("datasets/" + id + "_no.srt", length=len(predicted_summarized))
     print("accuracy rf: ", get_accuracy(predicted_summarized, subtitles_presence_array))
-
+    print(subtitles_presence_array)
     #visualize_prediction(predicted_sec, subtitles_array_sec)
     #plot_roc(predictedDist, labelDist)
 
@@ -130,7 +145,5 @@ def evaluate():
         end = start + len(predicted_summarized)
         #visualize_prediction(predicted, subtitles_array[start:end])
         print("unsync at: " + str(i) + ", " + str(is_unsynchronized(predicted_summarized, subtitles_presence_array, start, end, padding)))
-
-# -------------------------------- Training --------------
 
 main()

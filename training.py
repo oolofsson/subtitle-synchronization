@@ -22,12 +22,12 @@ def train():
     #X, y = get_features("SF_ANYTIME_9259", 100000, "chunk2")
     X = []
     y = []
-    for id in ["ABMQU", "AAFPU", "ABMQU", "SF_ANYTIME_9547", "CMRE0000000001000202"]:
+    for id in ["ABMUI"]: #, "ABMQU", "AAFPU", "ABMQU", "SF_ANYTIME_9547", "CMRE0000000001000202"]:
 
         # create chunks
         features = get_speech_features("datasets/" + id + ".wav")
         subtitles_presence_array = get_subtitles_presence_array("datasets/" + id + "_no.srt", int(len(features) / 200))
-        labels = create_labels_from_subtitles(subtitles_array_sec, len(features))
+        labels = create_labels_from_subtitles(subtitles_presence_array, len(features))
         print("lengths...")
         print(len(features))
         print(len(labels))
@@ -54,7 +54,7 @@ def train_svm(X, y):
     clf.fit(X, y)
     print("training finished.")
 
-    dump(clf, 'models/svm.joblib')
+    dump(clf, 'models/svm_one.joblib')
     return clf
 
 def train_random_forest(X, y):
@@ -70,7 +70,7 @@ def train_random_forest(X, y):
     clf.fit(X, y)
     print("training finished.")
 
-    dump(clf, 'models/rf.joblib')
+    dump(clf, 'models/rf_one.joblib')
     return clf
 
 def train_mlp(X, y):
@@ -86,5 +86,5 @@ def train_mlp(X, y):
     clf.fit(X, y)
     print("training finished.")
 
-    dump(clf, 'models/mlp.joblib')
+    dump(clf, 'models/mlp_one.joblib')
     return clf

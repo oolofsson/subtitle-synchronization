@@ -45,19 +45,22 @@ def get_subtitles_presence_array(srt_file, length, offset=0, padding=0):
 
         return np.concatenate((np.zeros(padding),
                                np.concatenate((subtitles_presence_array, np.zeros(padding)), axis=None)),
-                               axis=None)[0:length]
+                               axis=None)
 
-
-def redistribute(array, size):
+def redistribute(old_dist, size):
     num_ones = 0
-    dist = []
-    for i in range(len(array)):
-        if array[i] == 1:
+    new_dist = []
+    i = 0
+    for val in old_dist:
+        if val == 1:
             num_ones += 1
-        if i % size == 0:
-            dist.append((num_ones >= size / 2))
+        if i == size:
+            new_dist.append(int(num_ones >= (size / 2)))
             num_ones = 0
-    return dist
+            i = 0
+        i += 1
+    return new_dist
+
 
 # MFCC - plotting, to be used in get_speech_features
 #plt.matshow(features_mfcc)
