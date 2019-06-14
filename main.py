@@ -13,21 +13,23 @@ import requests
 import argparse
 import config
 import ffmpeg
+import glob
 
 s3_resource = boto3.resource('s3',
-    aws_access_key_id=config.aws['ACCESS_KEY'],
-    aws_secret_access_key=config.aws['SECRET_KEY']
+    aws_access_key_id=config.aws['aws_access_key_id'],
+    aws_secret_access_key=config.aws['aws_secret_access_key'],
+    aws_session_token=config.aws['aws_session_token']
 )
 
 def main():
-    train()
-
+    evaluate()
 
 def test_sync():
+
     id = "NGPlus_163151_183450"
 
     speech_features = get_speech_features("datasets/" + id + ".wav")
-    clf = load('models/rfnext.joblib')
+    clf = load('models/rf_mfcc.joblib')
 
     predicted = clf.predict(speech_features)
     padding = 100
@@ -40,14 +42,15 @@ def test_sync():
 # -------------------------------- Get Unsync Search --------------------------------
 
 def clean_detection_files():
-    if os.path.exists('audio.wav'):
-        os.remove('audio.wav')
-    if os.path.exists('subtitles.srt'):
-        os.remove('subtitles.srt')
-    if os.path.exists('subtitles.vtt'):
-        os.remove('subtitles.vtt')
-    if os.path.exists('audio.mp4'):
-        os.remove('audio.mp4')
+    audioFiles = glob.glob('audio.*')
+    # Iterate over the list of filepaths & remove each file.
+    for audioFile in audioFiles:
+        os.remove(audioFile)
+
+    subtitlesFiles = glob.glob('subtitles.*')
+    # Iterate over the list of filepaths & remove each file.
+    for subtitlesFile in subtitlesFiles:
+        os.remove(subtitlesFile)
 
 def convert():
     try:
@@ -63,7 +66,7 @@ def run_unsync_search():
     bucket = s3_resource.Bucket('get-internal-import')
     processed_ids = defaultdict(lambda:False)
 
-    clf = load('models/rfnext.joblib')
+    clf = load('models/rf_mfcc.joblib')
 
     for object in bucket.objects.all():
         keys = object.key.split('/')
@@ -119,31 +122,59 @@ def evaluate():
     # used for training default
     # "SF_ANYTIME_9259", "AAFPU", "ABMQU", "SF_ANYTIME_9547", "CMRE0000000001000202", "ABMUI", "ABMRG"
     # "ABMQU", "AAFPU", "ABMQU", "SF_ANYTIME_9547", "CMRE0000000001000202", "NGPlus_163151_183450", "FoxInSeasonStacked_YRG902"
-    id = "CMRE0000000001081770"
+    #id = "FoxInSeasonStacked_YRG902" #["SF_ANYTIME_9547", "CMRE0000000001000202", "NGPlus_163151_183450", "FoxInSeasonStacked_YRG902", "FoxPlus_YSS104"]
+    mean = 0
+    mean_auc = 0
+    mean_time = 0
+    for id in ["SF_ANYTIME_9547", "CMRE0000000001000202", "NGPlus_163151_183450", "FoxInSeasonStacked_YRG902", "FoxPlus_YSS104"]:
+    #for id in ["SF_ANYTIME_9547", "CMRE0000000001000202", "NGPlus_163151_183450", "FoxInSeasonStacked_YRG902", "FoxPlus_YSS104", "AAFPU", "FoxPlus_AACX15", "CMRE0000000001085484", "SF_ANYTIME_9564", "NGPlus_170158_268038"]:
+        print("start")
+        start = time.time()
+        speech_features = get_speech_features("datasets/" + id + ".wav", log=True)
+        end = time.time()
+        print("time taken to extract speech: ", end - start, "s")
 
-    speech_features = get_speech_features("datasets/" + id + ".wav")
+        clf = load('models/svm_mfcc.joblib')
 
-    clf = load('models/rfnext.joblib')
+        print("support vectors (all): ", len(clf.support_vectors_))
+        #print("support vectors (first): ", len(clf.estimator.support_vectors_[1]))
 
-    start = time.time()
-    predicted = clf.predict(speech_features)
-    end = time.time()
-    print("time taken to predict: ", end - start, "s")
+        start = time.time()
+        predicted = clf.predict(speech_features)
+        end = time.time()
 
-    predicted_summarized = redistribute(predicted, 200)
-    subtitles_presence_array = get_subtitles_presence_array("datasets/" + id + "_no.srt", length=len(predicted_summarized))
-    print("accuracy rf: ", get_accuracy(predicted_summarized, subtitles_presence_array))
-    print(subtitles_presence_array)
-    #visualize_prediction(predicted_sec, subtitles_array_sec)
-    #plot_roc(predictedDist, labelDist)
+        print("time taken to predict: ", end - start, "s")
+        mean_time += end - start
 
-    for i in range(0, 4):
-        padding = 100
-        subtitles_presence_array = get_subtitles_presence_array("datasets/" + id + "_no.srt", length=len(predicted_summarized), offset=i, padding=padding)
+        predicted_summarized = redistribute(predicted, 200)
+        subtitles_presence_array = get_subtitles_presence_array("datasets/" + id + "_no.srt", length=len(predicted_summarized))
+        acc = get_accuracy(predicted_summarized, subtitles_presence_array)
+        print("accuracy rf: ", acc)
+        auc = get_auc(predicted_summarized, subtitles_presence_array)
+        print("auc rf: ", auc)
+        mean += acc
+        mean_auc += auc
+        #print(subtitles_presence_array)
 
-        start = padding
-        end = start + len(predicted_summarized)
-        #visualize_prediction(predicted, subtitles_array[start:end])
-        print("unsync at: " + str(i) + ", " + str(is_unsynchronized(predicted_summarized, subtitles_presence_array, start, end, padding)))
+        #mean = mean / 5
+        #mean_time = mean_time / 5
+        #print("mean is: ", mean)
+        #print("mean_time is: ", mean_time)
+
+        #plot_roc(predicted_summarized, subtitles_presence_array)
+        '''
+        for i in range(0, 4):
+            padding = 100
+            subtitles_presence_array = get_subtitles_presence_array("datasets/" + id + "_no.srt", length=len(predicted_summarized), offset=i, padding=padding)
+
+            start = padding
+            end = start + len(predicted_summarized)
+            #visualize_prediction(predicted, subtitles_array[start:end])
+            print("unsync at: " + str(i) + ", " + str(is_unsynchronized(predicted_summarized, subtitles_presence_array, start, end, padding)))
+            '''
+    mean_auc = mean_auc / 5
+    print("mean auc is: ", mean_auc)
+    mean = mean / 5
+    print("mean acc is: ", mean)
 
 main()

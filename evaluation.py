@@ -1,5 +1,6 @@
 from scipy import spatial
 from sklearn import metrics
+import numpy as np
 import matplotlib.pyplot as plt
 
 def get_similarity(predicted, labels):
@@ -8,11 +9,12 @@ def get_similarity(predicted, labels):
 def get_accuracy(predicted, labels):
     return metrics.accuracy_score(labels, predicted)
 
+def get_auc(predicted, labels):
+    return metrics.roc_auc_score(labels, predicted)
 
 def plot_roc(predicted, labels):
-    fpr, tpr, thresholds = metrics.roc_curve(predicted, labels)
+    fpr, tpr, thresholds = metrics.roc_curve(labels, predicted)
     roc_auc = metrics.auc(fpr, tpr)
-
     plt.figure()
     plt.plot(fpr, tpr, color='darkorange', lw=1, label='ROC curve (area = %0.2f)' % roc_auc)
     plt.plot([0, 1], [0, 1], color='navy', lw=1, linestyle='--')

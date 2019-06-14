@@ -4,7 +4,7 @@ import numpy as np
 import datetime
 import os
 from scipy.io import wavfile
-from python_speech_features import mfcc, logfbank
+from python_speech_features import mfcc
 from joblib import dump, load
 from sklearn.preprocessing import scale
 
@@ -14,17 +14,11 @@ def get_speech_features(audio_file, log=False):
 
     features_mfcc = mfcc(signal=audio_signal, samplerate=frequency_sampling, winlen=0.025, nfft=512)
 
-    features_mfcc = features_mfcc.T
-
-    filterbank_features = logfbank(signal=audio_signal, samplerate=frequency_sampling, winlen=0.025, nfft=512)
-
     if log:
         print('\nMFCC:\nNumber of windows =', features_mfcc.shape[0])
         print('Length of each feature =', features_mfcc.shape[1])
-        print('\nFilter bank:\nNumber of windows =', filterbank_features.shape[0])
-        print('Length of each feature =', filterbank_features.shape[1])
 
-    return scale(np.array(filterbank_features), axis=0, with_mean=True, with_std=True, copy=True)
+    return scale(np.array(features_mfcc), axis=0, with_mean=True, with_std=True, copy=True)
 
 def get_subtitles_presence_array(srt_file, length, offset=0, padding=0):
     with open(srt_file) as file:
